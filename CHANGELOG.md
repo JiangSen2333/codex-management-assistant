@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [0.1.3] - 2026-08-15
+
+### Fixed
+
+- Updated the sidebar brand icon to use a dedicated packaged icon asset path.
+
 ## [0.1.2] - 2026-08-15
 
 ### Added

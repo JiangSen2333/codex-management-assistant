@@ -8,6 +8,7 @@ const sourceIcon = path.join(projectRoot, "assets", "app-icon.png");
 const targetIcon = path.join(projectRoot, "assets", "app-icon.icns");
 const targetWindowsIcon = path.join(projectRoot, "assets", "app-icon.ico");
 const targetPublicIcon = path.join(projectRoot, "public", "app-icon.png");
+const targetPublicBrandIcon = path.join(projectRoot, "public", "app-brand-icon.png");
 const targetLoadingIcon = path.join(projectRoot, "neutralino", "resources", "app-icon.png");
 const require = createRequire(import.meta.url);
 const png2icons = require("png2icons");
@@ -19,6 +20,9 @@ if (!fs.existsSync(sourceIcon)) {
 const input = fs.readFileSync(sourceIcon);
 fs.copyFileSync(sourceIcon, targetPublicIcon);
 console.log(`Copied ${targetPublicIcon}`);
+
+fs.copyFileSync(sourceIcon, targetPublicBrandIcon);
+console.log(`Copied ${targetPublicBrandIcon}`);
 
 fs.copyFileSync(sourceIcon, targetLoadingIcon);
 console.log(`Copied ${targetLoadingIcon}`);
