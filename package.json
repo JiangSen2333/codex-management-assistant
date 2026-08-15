@@ -1,0 +1,24 @@
+{
+  "name": "codex-management-assistant",
+  "version": "0.1.0",
+  "description": "Local desktop assistant for managing Codex provider IDs, session history migration, and rollback.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "neutralino:update": "npx @neutralinojs/neu update",
+    "neutralino:clean": "node scripts/clean-neutralino.mjs",
+    "neutralino:prepare": "node scripts/prepare-neutralino.mjs",
+    "neutralino:run": "npm run neutralino:prepare && npx @neutralinojs/neu run",
+    "neutralino:build": "npm run neutralino:prepare && npm run neutralino:clean && npx @neutralinojs/neu build --release",
+    "neutralino:build:mac": "npm run neutralino:build && node scripts/package-mac-app.mjs",
+    "neutralino:release:mac": "npm run neutralino:build:mac && node scripts/package-release.mjs",
+    "version:sync": "node scripts/sync-version.mjs"
+  },
+  "devDependencies": {
+    "@neutralinojs/lib": "^6.9.0",
+    "@neutralinojs/neu": "^11.5.0"
+  }
+}

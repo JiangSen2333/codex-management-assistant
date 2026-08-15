@@ -1,0 +1,65 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
+  "applicationId": "dev.codex.management.assistant",
+  "version": "0.1.0",
+  "defaultMode": "window",
+  "port": 0,
+  "documentRoot": "/neutralino/resources/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "enableExtensions": true,
+  "tokenSecurity": "one-time",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": true
+  },
+  "nativeAllowList": [
+    "app.*",
+    "debug.log",
+    "events.*",
+    "extensions.*",
+    "os.*",
+    "window.*"
+  ],
+  "extensions": [
+    {
+      "id": "dev.codex.management.assistant.node",
+      "commandDarwin": "\"${NL_PATH}/neutralino/extensions/provider-manager/runtime/darwin/node\" \"${NL_PATH}/neutralino/extensions/provider-manager/main.js\"",
+      "commandWindows": "\"${NL_PATH}/neutralino/extensions/provider-manager/runtime/windows/node.exe\" \"${NL_PATH}/neutralino/extensions/provider-manager/main.js\"",
+      "commandLinux": "\"${NL_PATH}/neutralino/extensions/provider-manager/runtime/linux/node\" \"${NL_PATH}/neutralino/extensions/provider-manager/main.js\""
+    }
+  ],
+  "modes": {
+    "window": {
+      "title": "Codex 管理助手",
+      "width": 1180,
+      "height": 760,
+      "minWidth": 960,
+      "minHeight": 640,
+      "center": true,
+      "fullScreen": false,
+      "alwaysOnTop": false,
+      "enableInspector": false,
+      "borderless": false,
+      "maximize": false,
+      "hidden": false,
+      "resizable": true,
+      "exitProcessOnClose": true
+    },
+    "browser": {
+      "globalVariables": {}
+    },
+    "cloud": {
+      "url": "/"
+    }
+  },
+  "cli": {
+    "binaryName": "codex-management-assistant",
+    "resourcesPath": "/neutralino/resources/",
+    "extensionsPath": "/neutralino/extensions/",
+    "clientLibrary": "/neutralino/resources/js/neutralino.js",
+    "binaryVersion": "6.3.0",
+    "clientVersion": "5.5.0"
+  }
+}
