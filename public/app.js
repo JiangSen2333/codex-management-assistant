@@ -32,6 +32,10 @@ const translations = {
     updateNotAvailable: "当前已是最新版本：{version}",
     updateCheckFailed: "检查更新失败：{message}",
     downloadLatest: "下载最新版",
+    downloadingUpdate: "正在开始下载...",
+    updateDownloaded: "已下载到 {path}",
+    updateDownloadUnavailable: "当前版本没有可下载的安装包。",
+    updateDownloadFailed: "下载失败：{message}",
     viewRelease: "Release 页面",
     updateConfig: "更新当前配置",
     updateConfigMeta: "写入 config.toml",
@@ -152,6 +156,10 @@ const translations = {
     updateNotAvailable: "You are on the latest version: {version}",
     updateCheckFailed: "Update check failed: {message}",
     downloadLatest: "Download Latest",
+    downloadingUpdate: "Starting download...",
+    updateDownloaded: "Downloaded to {path}",
+    updateDownloadUnavailable: "This release does not include a downloadable package.",
+    updateDownloadFailed: "Download failed: {message}",
     viewRelease: "Release Page",
     updateConfig: "Update active config",
     updateConfigMeta: "Write config.toml",
@@ -438,13 +446,14 @@ function renderUpdate(update) {
     current: update.currentVersion,
     asset: assetName,
   });
-  elements.updateDownload.href = update.asset?.downloadUrl || update.releaseUrl || "#";
+  elements.updateDownload.dataset.downloadUrl = update.asset?.downloadUrl || "";
+  elements.updateDownload.dataset.assetName = update.asset?.name || "";
   elements.updateRelease.href = update.releaseUrl || update.asset?.downloadUrl || "#";
   elements.updateDownload.hidden = !update.asset?.downloadUrl;
   elements.updateRelease.hidden = !update.releaseUrl;
 }
 
-async function checkUpdate() {
+async function checkUpdate({ silent = false } = {}) {
   if (isBusy) return;
   const previousText = elements.updateButton.textContent;
   elements.updateButton.disabled = true;
@@ -455,18 +464,50 @@ async function checkUpdate() {
     renderUpdate(update);
     if (update.updateAvailable) {
       showToast(t("updateAvailableTitle", { version: update.latestVersion }));
-    } else {
+    } else if (!silent) {
       showNotice(t("updateNotAvailable", { version: update.currentVersion }), "info");
       showToast(t("updateNotAvailable", { version: update.currentVersion }));
     }
   } catch (error) {
     const message = t("updateCheckFailed", { message: error.message });
-    showNotice(message);
-    showToast(message);
+    if (!silent) {
+      showNotice(message);
+      showToast(message);
+    } else {
+      console.warn(message);
+    }
   } finally {
     elements.updateButton.disabled = false;
     elements.updateButton.textContent = previousText;
   }
+}
+
+function downloadUpdate() {
+  if (!latestUpdate?.asset) {
+    showNotice(t("updateDownloadUnavailable"), "info");
+    showToast(t("updateDownloadUnavailable"));
+    return;
+  }
+
+  const previousText = elements.updateDownload.textContent;
+  elements.updateDownload.disabled = true;
+  elements.updateDownload.textContent = t("downloadingUpdate");
+
+  return api("/api/update/download", {})
+    .then((result) => {
+      const filePath = result.filePath || "-";
+      showNotice(t("updateDownloaded", { path: filePath }), "info");
+      showToast(t("updateDownloaded", { path: filePath }));
+    })
+    .catch((error) => {
+      const message = t("updateDownloadFailed", { message: error.message });
+      showNotice(message);
+      showToast(message);
+    })
+    .finally(() => {
+      elements.updateDownload.disabled = false;
+      elements.updateDownload.textContent = previousText || t("downloadLatest");
+    });
 }
 
 function invalidatePlan() {
@@ -767,7 +808,10 @@ elements.refreshButton.addEventListener("click", () => {
   });
 });
 
-elements.updateButton.addEventListener("click", checkUpdate);
+elements.updateButton.addEventListener("click", () => checkUpdate());
+elements.updateDownload.addEventListener("click", () => {
+  downloadUpdate();
+});
 
 [
   elements.sourceProvider,
@@ -797,7 +841,9 @@ elements.directoryLinks.forEach((link) => {
 
 applyLanguage();
 
-refresh().catch((error) => {
+refresh().then(() => {
+  checkUpdate({ silent: true });
+}).catch((error) => {
   setStatus("failed");
   showNotice(error.message);
   showToast(error.message);

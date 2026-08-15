@@ -7,6 +7,7 @@ const https = require("https");
 const http = require("http");
 const os = require("os");
 const path = require("path");
+const { pipeline } = require("stream/promises");
 const { DatabaseSync } = require("node:sqlite");
 const url = require("url");
 
@@ -16,6 +17,7 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const MIGRATION_DIR = path.join(CODEX_HOME, "provider-migrations");
 const OPERATIONS_FILE = path.join(MIGRATION_DIR, "operations.jsonl");
 const GITHUB_REPOSITORY = "JiangSen2333/codex-management-assistant";
+const UPDATE_DOWNLOAD_DIR = path.resolve(process.env.UPDATE_DOWNLOAD_DIR || path.join(os.homedir(), "Downloads"));
 const APP_VERSION = readAppVersion();
 
 function readAppVersion() {
@@ -111,6 +113,44 @@ function requestJson(requestUrl) {
   });
 }
 
+function requestBinary(requestUrl, redirectCount = 0) {
+  return new Promise((resolve, reject) => {
+    const githubRequest = https.get(
+      requestUrl,
+      {
+        headers: {
+          "Accept": "application/octet-stream",
+          "User-Agent": `codex-management-assistant/${APP_VERSION}`,
+        },
+      },
+      (githubResponse) => {
+        const statusCode = githubResponse.statusCode || 0;
+
+        if ([301, 302, 303, 307, 308].includes(statusCode) && githubResponse.headers.location) {
+          githubResponse.resume();
+          if (redirectCount >= 5) {
+            reject(new Error("GitHub download redirected too many times"));
+            return;
+          }
+          const nextUrl = new URL(githubResponse.headers.location, requestUrl).toString();
+          resolve(requestBinary(nextUrl, redirectCount + 1));
+          return;
+        }
+
+        if (statusCode < 200 || statusCode >= 300) {
+          reject(new Error(`GitHub download failed with status ${statusCode}`));
+          return;
+        }
+
+        resolve(githubResponse);
+      }
+    );
+
+    githubRequest.setTimeout(15_000, () => githubRequest.destroy(new Error("GitHub download timed out")));
+    githubRequest.on("error", reject);
+  });
+}
+
 function compareVersions(left, right) {
   const a = String(left || "0.0.0").replace(/^v/i, "").split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
   const b = String(right || "0.0.0").replace(/^v/i, "").split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
@@ -128,12 +168,25 @@ function releaseAsset(release, extension) {
   return release.assets?.find((asset) => asset.name?.endsWith(extension)) || null;
 }
 
+function preferredReleaseAsset(release) {
+  const preferredExtensions = process.platform === "darwin"
+    ? [".dmg", ".zip"]
+    : process.platform === "win32"
+      ? [".zip", ".exe", ".msi"]
+      : [".zip", ".dmg", ".exe", ".msi"];
+
+  for (const extension of preferredExtensions) {
+    const asset = releaseAsset(release, extension);
+    if (asset) return asset;
+  }
+
+  return release.assets?.[0] || null;
+}
+
 async function checkLatestRelease() {
   const release = await requestJson(`https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest`);
   const latestVersion = String(release.tag_name || release.name || "").replace(/^v/i, "") || "0.0.0";
-  const dmg = releaseAsset(release, ".dmg");
-  const zip = releaseAsset(release, ".zip");
-  const asset = dmg || zip;
+  const asset = preferredReleaseAsset(release);
 
   return {
     currentVersion: APP_VERSION,
@@ -147,10 +200,83 @@ async function checkLatestRelease() {
     asset: asset ? {
       name: asset.name,
       size: asset.size,
-      downloadUrl: asset.browser_download_url,
+      downloadUrl: "/api/update/download",
       contentType: asset.content_type,
     } : null,
   };
+}
+
+function encodeContentDispositionFilename(filename) {
+  const safeName = String(filename || "codex-management-assistant-release").replace(/[\r\n"]/g, "_");
+  return `attachment; filename="${safeName.replace(/[^\x20-\x7E]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(safeName)}`;
+}
+
+function safeAssetFilename(filename) {
+  const fallback = "codex-management-assistant-release";
+  const normalized = String(filename || fallback).replace(/[\\/]/g, "_");
+  return path.basename(normalized).replace(/[<>:"|?*\u0000-\u001F]/g, "_") || fallback;
+}
+
+async function downloadReleaseAssetToDisk() {
+  const release = await requestJson(`https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest`);
+  const asset = preferredReleaseAsset(release);
+
+  if (!asset?.browser_download_url) {
+    throw new Error("Latest release does not include a downloadable asset");
+  }
+
+  ensureDirectory(UPDATE_DOWNLOAD_DIR);
+
+  const filename = safeAssetFilename(asset.name);
+  const filePath = path.join(UPDATE_DOWNLOAD_DIR, filename);
+  const tempPath = path.join(UPDATE_DOWNLOAD_DIR, `${filename}.download-${process.pid}-${Date.now()}`);
+  const upstream = await requestBinary(asset.browser_download_url);
+
+  try {
+    await pipeline(upstream, fs.createWriteStream(tempPath));
+    fs.rmSync(filePath, { force: true });
+    fs.renameSync(tempPath, filePath);
+  } catch (error) {
+    fs.rmSync(tempPath, { force: true });
+    throw error;
+  }
+
+  return {
+    filePath,
+    asset: {
+      name: asset.name,
+      size: asset.size,
+      contentType: asset.content_type,
+    },
+    latestVersion: String(release.tag_name || release.name || "").replace(/^v/i, "") || "0.0.0",
+    releaseUrl: release.html_url,
+  };
+}
+
+async function handleUpdateDownload(response) {
+  const release = await requestJson(`https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest`);
+  const asset = preferredReleaseAsset(release);
+
+  if (!asset?.browser_download_url) {
+    throw new Error("Latest release does not include a downloadable asset");
+  }
+
+  const upstream = await requestBinary(asset.browser_download_url);
+  const contentType = upstream.headers["content-type"] || asset.content_type || "application/octet-stream";
+  const contentLength = upstream.headers["content-length"];
+
+  response.writeHead(200, {
+    "Content-Type": contentType,
+    ...(contentLength ? { "Content-Length": contentLength } : {}),
+    "Content-Disposition": encodeContentDispositionFilename(asset.name),
+    "Cache-Control": "no-store",
+  });
+
+  upstream.on("error", (error) => {
+    response.destroy(error);
+  });
+
+  upstream.pipe(response);
 }
 
 function ensureDirectory(directory) {
@@ -881,6 +1007,17 @@ async function handleRequest(request, response) {
 
     if (request.method === "GET" && parsed.pathname === "/api/update") {
       sendJson(response, 200, await checkLatestRelease());
+      return;
+    }
+
+    if (request.method === "GET" && parsed.pathname === "/api/update/download") {
+      await handleUpdateDownload(response);
+      return;
+    }
+
+    if (request.method === "POST" && parsed.pathname === "/api/update/download") {
+      await readRequestBody(request);
+      sendJson(response, 200, await downloadReleaseAssetToDisk());
       return;
     }
 
