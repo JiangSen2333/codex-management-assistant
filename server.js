@@ -3,6 +3,7 @@
 
 const crypto = require("crypto");
 const fs = require("fs");
+const https = require("https");
 const http = require("http");
 const os = require("os");
 const path = require("path");
@@ -14,6 +15,27 @@ const CODEX_HOME = path.resolve(process.env.CODEX_HOME || path.join(os.homedir()
 const PUBLIC_DIR = path.join(__dirname, "public");
 const MIGRATION_DIR = path.join(CODEX_HOME, "provider-migrations");
 const OPERATIONS_FILE = path.join(MIGRATION_DIR, "operations.jsonl");
+const GITHUB_REPOSITORY = "JiangSen2333/codex-management-assistant";
+const APP_VERSION = readAppVersion();
+
+function readAppVersion() {
+  const candidates = [
+    path.join(__dirname, "package.json"),
+    path.join(__dirname, "..", "package.json"),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) {
+        return JSON.parse(fs.readFileSync(candidate, "utf8")).version || "0.0.0";
+      }
+    } catch {
+      // Fall through to the default version.
+    }
+  }
+
+  return "0.0.0";
+}
 
 function sendJson(response, status, payload) {
   const body = JSON.stringify(payload, null, 2);
@@ -47,6 +69,88 @@ function readRequestBody(request) {
     request.on("end", () => resolve(body ? JSON.parse(body) : {}));
     request.on("error", reject);
   });
+}
+
+function requestJson(requestUrl) {
+  return new Promise((resolve, reject) => {
+    const githubRequest = https.get(
+      requestUrl,
+      {
+        headers: {
+          "Accept": "application/vnd.github+json",
+          "User-Agent": `codex-management-assistant/${APP_VERSION}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      },
+      (githubResponse) => {
+        let body = "";
+        githubResponse.setEncoding("utf8");
+        githubResponse.on("data", (chunk) => {
+          body += chunk;
+          if (body.length > 2_000_000) {
+            githubResponse.destroy(new Error("Response body is too large"));
+          }
+        });
+        githubResponse.on("end", () => {
+          if (githubResponse.statusCode < 200 || githubResponse.statusCode >= 300) {
+            reject(new Error(`GitHub request failed with status ${githubResponse.statusCode}`));
+            return;
+          }
+
+          try {
+            resolve(JSON.parse(body));
+          } catch {
+            reject(new Error("GitHub returned an invalid JSON response"));
+          }
+        });
+      }
+    );
+
+    githubRequest.setTimeout(10_000, () => githubRequest.destroy(new Error("GitHub request timed out")));
+    githubRequest.on("error", reject);
+  });
+}
+
+function compareVersions(left, right) {
+  const a = String(left || "0.0.0").replace(/^v/i, "").split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+  const b = String(right || "0.0.0").replace(/^v/i, "").split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+  const length = Math.max(a.length, b.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const delta = (a[index] || 0) - (b[index] || 0);
+    if (delta) return Math.sign(delta);
+  }
+
+  return 0;
+}
+
+function releaseAsset(release, extension) {
+  return release.assets?.find((asset) => asset.name?.endsWith(extension)) || null;
+}
+
+async function checkLatestRelease() {
+  const release = await requestJson(`https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest`);
+  const latestVersion = String(release.tag_name || release.name || "").replace(/^v/i, "") || "0.0.0";
+  const dmg = releaseAsset(release, ".dmg");
+  const zip = releaseAsset(release, ".zip");
+  const asset = dmg || zip;
+
+  return {
+    currentVersion: APP_VERSION,
+    latestVersion,
+    repository: GITHUB_REPOSITORY,
+    updateAvailable: compareVersions(latestVersion, APP_VERSION) > 0,
+    releaseName: release.name || release.tag_name || latestVersion,
+    releaseUrl: release.html_url,
+    publishedAt: release.published_at,
+    notes: release.body || "",
+    asset: asset ? {
+      name: asset.name,
+      size: asset.size,
+      downloadUrl: asset.browser_download_url,
+      contentType: asset.content_type,
+    } : null,
+  };
 }
 
 function ensureDirectory(directory) {
@@ -753,8 +857,16 @@ function serveStatic(requestPath, response) {
     return;
   }
 
-  const ext = path.extname(filePath);
-  const type = ext === ".css" ? "text/css; charset=utf-8" : ext === ".js" ? "application/javascript; charset=utf-8" : "text/html; charset=utf-8";
+  const ext = path.extname(filePath).toLowerCase();
+  const types = {
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+    ".svg": "image/svg+xml",
+    ".html": "text/html; charset=utf-8",
+  };
+  const type = types[ext] || "application/octet-stream";
   sendText(response, 200, fs.readFileSync(filePath), type);
 }
 
@@ -764,6 +876,11 @@ async function handleRequest(request, response) {
   try {
     if (request.method === "GET" && parsed.pathname === "/api/state") {
       sendJson(response, 200, scanState());
+      return;
+    }
+
+    if (request.method === "GET" && parsed.pathname === "/api/update") {
+      sendJson(response, 200, await checkLatestRelease());
       return;
     }
 

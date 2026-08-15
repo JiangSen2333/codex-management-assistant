@@ -35,4 +35,6 @@ jobs:
       - name: Upload GitHub Release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/codex-management-assistant-mac-*.zip
+          files: |
+            dist/codex-management-assistant-mac-*.zip
+            dist/codex-management-assistant-mac-*.dmg

@@ -66,11 +66,11 @@ input {
   width: 30px;
   height: 30px;
   place-items: center;
+  overflow: hidden;
   border-radius: 8px;
-  background: var(--accent);
+  background: transparent;
 }
 
-.brand-mark svg,
 .icon-button svg {
   width: 17px;
   height: 17px;
@@ -81,8 +81,11 @@ input {
   stroke-linejoin: round;
 }
 
-.brand-mark svg {
-  color: #fff;
+.brand-mark img {
+  display: block;
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
 }
 
 .brand-copy {
@@ -348,6 +351,12 @@ button:disabled {
   gap: 12px;
 }
 
+.compact-button {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
 .title-row {
   display: flex;
   align-items: center;
@@ -399,6 +408,81 @@ button:disabled {
   border-radius: 8px;
   color: #8a2a22;
   background: #fff2f0;
+}
+
+.notice[data-tone="info"] {
+  border-color: #d9d6ff;
+  color: #4e46e8;
+  background: #f0efff;
+}
+
+.update-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid #d9d6ff;
+  border-radius: 8px;
+  background: #f8f7ff;
+  box-shadow: 0 6px 18px rgba(40, 36, 61, 0.04);
+}
+
+.update-panel[hidden] {
+  display: none;
+}
+
+.update-panel strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.update-panel p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.update-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.button-link,
+.ghost-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border-radius: 7px;
+  padding: 0 11px;
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.button-link {
+  color: #fff;
+  background: var(--accent);
+}
+
+.button-link:hover {
+  background: var(--accent-dark);
+}
+
+.ghost-link {
+  border: 1px solid var(--line);
+  color: var(--ink);
+  background: #fff;
+}
+
+.ghost-link:hover {
+  background: #f7f7fa;
 }
 
 .migration-grid,
@@ -908,6 +992,14 @@ input:not([type]):focus {
 
   .topbar-actions {
     justify-content: space-between;
+  }
+
+  .update-panel {
+    display: grid;
+  }
+
+  .update-actions {
+    flex-wrap: wrap;
   }
 
   .toggles {

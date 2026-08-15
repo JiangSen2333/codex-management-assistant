@@ -25,6 +25,14 @@ const translations = {
     sourceLabel: "旧标识名",
     targetLabel: "新标识名",
     targetPlaceholder: "此处填写新标识名",
+    checkUpdate: "检查更新",
+    checkingUpdate: "检查中",
+    updateAvailableTitle: "发现新版本 {version}",
+    updateAvailableMessage: "当前版本 {current}，建议下载 {asset} 安装到本地。",
+    updateNotAvailable: "当前已是最新版本：{version}",
+    updateCheckFailed: "检查更新失败：{message}",
+    downloadLatest: "下载最新版",
+    viewRelease: "Release 页面",
     updateConfig: "更新当前配置",
     updateConfigMeta: "写入 config.toml",
     renameDefinition: "重命名 provider 定义",
@@ -137,6 +145,14 @@ const translations = {
     sourceLabel: "Old provider name",
     targetLabel: "New provider name",
     targetPlaceholder: "Enter new provider name",
+    checkUpdate: "Check Update",
+    checkingUpdate: "Checking",
+    updateAvailableTitle: "Update available {version}",
+    updateAvailableMessage: "Current version {current}. Download {asset} to install locally.",
+    updateNotAvailable: "You are on the latest version: {version}",
+    updateCheckFailed: "Update check failed: {message}",
+    downloadLatest: "Download Latest",
+    viewRelease: "Release Page",
     updateConfig: "Update active config",
     updateConfigMeta: "Write config.toml",
     renameDefinition: "Rename provider definition",
@@ -238,6 +254,12 @@ const elements = {
   statusBadge: document.querySelector("#statusBadge"),
   toast: document.querySelector("#toast"),
   notice: document.querySelector("#notice"),
+  updateButton: document.querySelector("#updateButton"),
+  updatePanel: document.querySelector("#updatePanel"),
+  updateTitle: document.querySelector("#updateTitle"),
+  updateMessage: document.querySelector("#updateMessage"),
+  updateDownload: document.querySelector("#updateDownload"),
+  updateRelease: document.querySelector("#updateRelease"),
   form: document.querySelector("#migrationForm"),
   refreshButton: document.querySelector("#refreshButton"),
   planButton: document.querySelector("#planButton"),
@@ -275,6 +297,7 @@ let currentLanguage = normalizeLanguage(localStorage.getItem(languageStorageKey)
 let currentStatusKey = "ready";
 let currentActionHintKey = "actionDefault";
 let currentActionHintValues = {};
+let latestUpdate = null;
 
 function normalizeLanguage(value) {
   return String(value || "").toLowerCase().startsWith("zh") ? "zh" : "en";
@@ -308,6 +331,7 @@ function applyLanguage() {
     renderCounts(latestState);
     renderOperations(latestState.operations);
   }
+  if (latestUpdate) renderUpdate(latestUpdate);
   if (latestPlan) updatePlanConflictLabel(latestPlan);
 }
 
@@ -396,7 +420,53 @@ function setBusy(busy, hintKey = "", hintValues = {}) {
   elements.planButton.disabled = busy;
   elements.applyButton.disabled = busy;
   elements.refreshButton.disabled = busy;
+  elements.updateButton.disabled = busy;
   if (hintKey) setActionHint(hintKey, hintValues);
+}
+
+function renderUpdate(update) {
+  latestUpdate = update;
+  if (!update.updateAvailable) {
+    elements.updatePanel.hidden = true;
+    return;
+  }
+
+  const assetName = update.asset?.name || "release";
+  elements.updatePanel.hidden = false;
+  elements.updateTitle.textContent = t("updateAvailableTitle", { version: update.latestVersion });
+  elements.updateMessage.textContent = t("updateAvailableMessage", {
+    current: update.currentVersion,
+    asset: assetName,
+  });
+  elements.updateDownload.href = update.asset?.downloadUrl || update.releaseUrl || "#";
+  elements.updateRelease.href = update.releaseUrl || update.asset?.downloadUrl || "#";
+  elements.updateDownload.hidden = !update.asset?.downloadUrl;
+  elements.updateRelease.hidden = !update.releaseUrl;
+}
+
+async function checkUpdate() {
+  if (isBusy) return;
+  const previousText = elements.updateButton.textContent;
+  elements.updateButton.disabled = true;
+  elements.updateButton.textContent = t("checkingUpdate");
+
+  try {
+    const update = await api("/api/update");
+    renderUpdate(update);
+    if (update.updateAvailable) {
+      showToast(t("updateAvailableTitle", { version: update.latestVersion }));
+    } else {
+      showNotice(t("updateNotAvailable", { version: update.currentVersion }), "info");
+      showToast(t("updateNotAvailable", { version: update.currentVersion }));
+    }
+  } catch (error) {
+    const message = t("updateCheckFailed", { message: error.message });
+    showNotice(message);
+    showToast(message);
+  } finally {
+    elements.updateButton.disabled = false;
+    elements.updateButton.textContent = previousText;
+  }
 }
 
 function invalidatePlan() {
@@ -696,6 +766,8 @@ elements.refreshButton.addEventListener("click", () => {
     showToast(error.message);
   });
 });
+
+elements.updateButton.addEventListener("click", checkUpdate);
 
 [
   elements.sourceProvider,

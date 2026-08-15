@@ -24,10 +24,17 @@ Codex 管理助手（Codex Management Assistant）是一个本地桌面工具，
 
 正式发布后，请从 GitHub Releases 下载最新版：
 
-- macOS: `codex-management-assistant-mac-v<version>.zip`
+- macOS installer: `codex-management-assistant-mac-v<version>.dmg`
+- macOS portable app: `codex-management-assistant-mac-v<version>.zip`
 - Windows: planned
 
 Windows 包需要补齐 Windows Node runtime 后再发布。
+
+## Install On macOS
+
+Download the `.dmg`, open it, then drag `Codex 管理助手.app` to `Applications`.
+
+The `.zip` package is also available if you prefer to run the app without an installer.
 
 ## Usage
 
@@ -41,6 +48,12 @@ Windows 包需要补齐 Windows Node runtime 后再发布。
 8. 如有问题，在“迁移记录”中点击“回滚”。
 
 迁移后建议重启 Codex Desktop，让侧边栏和任务列表重新读取本地索引。
+
+## Updates
+
+Use the “检查更新 / Check Update” button in the app to query the latest GitHub Release.
+
+If a newer version is available, the app shows the recommended download package and a link to the Release page. Install the downloaded `.dmg`, then restart the app.
 
 ## What It Updates
 
@@ -124,9 +137,10 @@ Build a macOS GitHub Release zip:
 npm run neutralino:release:mac
 ```
 
-The archive is written to:
+The archives are written to:
 
 ```text
+dist/codex-management-assistant-mac-v<version>.dmg
 dist/codex-management-assistant-mac-v<version>.zip
 ```
 

@@ -9,10 +9,12 @@ const neutralinoClientSource = path.join(projectRoot, "node_modules", "@neutrali
 const neutralinoClientTarget = path.join(projectRoot, "neutralino", "resources", "js", "neutralino.js");
 const sourceServer = path.join(projectRoot, "server.js");
 const sourcePublic = path.join(projectRoot, "public");
+const sourcePackage = path.join(projectRoot, "package.json");
 
 fs.rmSync(appRoot, { recursive: true, force: true });
 fs.mkdirSync(appRoot, { recursive: true });
 fs.copyFileSync(sourceServer, path.join(appRoot, "server.js"));
+fs.copyFileSync(sourcePackage, path.join(appRoot, "package.json"));
 fs.cpSync(sourcePublic, path.join(appRoot, "public"), { recursive: true });
 
 if (fs.existsSync(neutralinoClientSource)) {

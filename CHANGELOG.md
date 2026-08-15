@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [0.1.2] - 2026-08-15
+
+### Added
+
+- Added macOS `.dmg` installer packaging.
+- Added in-app GitHub Release update checks.
+- Added update download and Release page actions.
+- Reused the application icon in the sidebar brand and Neutralino loading page.
+
+### Changed
+
+- Matched the Neutralino loading page colors with the main app UI.
+- Updated release workflow to upload both `.zip` and `.dmg` assets.
+
 ## [0.1.1] - 2026-08-15
 
 ### Added

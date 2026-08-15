@@ -7,7 +7,17 @@
     <style>
       :root {
         color-scheme: light;
-        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --bg: #f5f5f8;
+        --panel: #ffffff;
+        --ink: #202126;
+        --muted: #71727c;
+        --subtle: #8d8e98;
+        --line: #e5e5ea;
+        --accent: #635bff;
+        --accent-dark: #4e46e8;
+        --soft: #f0efff;
+        --shadow: 0 10px 30px rgba(40, 36, 61, 0.07);
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
       body {
@@ -15,51 +25,92 @@
         min-height: 100svh;
         display: grid;
         place-items: center;
-        background: #f6f4ef;
-        color: #171717;
+        background: var(--bg);
+        color: var(--ink);
       }
 
       main {
-        width: min(480px, calc(100vw - 48px));
+        width: min(460px, calc(100vw - 48px));
         display: grid;
-        gap: 14px;
-        text-align: center;
+        gap: 16px;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand img {
+        display: block;
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        object-fit: cover;
+      }
+
+      .brand-copy {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
       }
 
       h1 {
         margin: 0;
-        font-size: 24px;
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1.25;
         letter-spacing: 0;
       }
 
       p {
         margin: 0;
-        color: #6c6a64;
-        line-height: 1.6;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
       }
 
       .subtitle {
-        color: #19715d;
-        font-weight: 700;
+        color: var(--subtle);
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0;
       }
 
       button {
-        justify-self: center;
-        min-height: 42px;
+        justify-self: start;
+        min-height: 32px;
         border: 0;
-        border-radius: 6px;
-        padding: 0 18px;
+        border-radius: 7px;
+        padding: 0 12px;
         color: #fff;
-        background: #19715d;
+        background: var(--accent);
         font: inherit;
+        font-size: 10px;
+        font-weight: 600;
         cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-dark);
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>Codex 管理助手</h1>
-      <p class="subtitle">Codex Management Assistant</p>
+      <div class="brand">
+        <img src="app-icon.png" alt="" />
+        <div class="brand-copy">
+          <h1>Codex 管理助手</h1>
+          <p class="subtitle">MANAGEMENT ASSISTANT</p>
+        </div>
+      </div>
       <p id="status">正在启动本地管理服务... / Starting local manager...</p>
       <button id="retryButton" type="button" hidden>重新打开 / Retry</button>
     </main>
