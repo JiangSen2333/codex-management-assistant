@@ -1,7 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
   "applicationId": "dev.codex.management.assistant",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "applicationIcon": "assets/app-icon.png",
   "defaultMode": "window",
   "port": 0,
   "documentRoot": "/neutralino/resources/",
@@ -33,6 +34,7 @@
   "modes": {
     "window": {
       "title": "Codex 管理助手",
+      "icon": "assets/app-icon.png",
       "width": 1180,
       "height": 760,
       "minWidth": 960,

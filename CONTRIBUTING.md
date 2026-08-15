@@ -25,6 +25,7 @@ Run JavaScript syntax checks before submitting changes:
 node --check server.js
 node --check public/app.js
 node --check scripts/prepare-neutralino.mjs
+node --check scripts/build-icons.mjs
 node --check scripts/package-mac-app.mjs
 node --check scripts/package-release.mjs
 node --check scripts/sync-version.mjs

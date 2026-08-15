@@ -12,8 +12,11 @@ const releaseRoot = path.join(distRoot, binaryName);
 const bundleRoot = path.join(distRoot, "Codex 管理助手.app");
 const contentsRoot = path.join(bundleRoot, "Contents");
 const macOSRoot = path.join(contentsRoot, "MacOS");
+const resourcesRoot = path.join(contentsRoot, "Resources");
 const executableSource = path.join(releaseRoot, `${binaryName}-mac_universal`);
 const executableTarget = path.join(macOSRoot, binaryName);
+const iconSource = path.join(projectRoot, "assets", "app-icon.icns");
+const iconName = "app-icon";
 
 if (!fs.existsSync(executableSource)) {
   throw new Error(`Missing macOS executable: ${executableSource}`);
@@ -21,11 +24,18 @@ if (!fs.existsSync(executableSource)) {
 
 fs.rmSync(bundleRoot, { recursive: true, force: true });
 fs.mkdirSync(macOSRoot, { recursive: true });
+fs.mkdirSync(resourcesRoot, { recursive: true });
 
 fs.copyFileSync(executableSource, executableTarget);
 fs.chmodSync(executableTarget, 0o755);
 fs.copyFileSync(path.join(releaseRoot, "resources.neu"), path.join(macOSRoot, "resources.neu"));
 fs.cpSync(path.join(releaseRoot, "neutralino"), path.join(macOSRoot, "neutralino"), { recursive: true });
+
+if (fs.existsSync(iconSource)) {
+  fs.copyFileSync(iconSource, path.join(resourcesRoot, `${iconName}.icns`));
+} else {
+  console.warn(`Skipped app icon: ${iconSource} not found`);
+}
 
 function xml(value) {
   return String(value)
@@ -53,6 +63,10 @@ const plist = `<?xml version="1.0" encoding="UTF-8"?>
   <string>6.0</string>
   <key>CFBundleName</key>
   <string>${xml(appName)}</string>
+  <key>CFBundleIconFile</key>
+  <string>${xml(iconName)}</string>
+  <key>CFBundleIconName</key>
+  <string>${xml(iconName)}</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>

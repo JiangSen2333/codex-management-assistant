@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [0.1.1] - 2026-08-15
+
+### Added
+
+- Added the official application icon source image.
+- Generated macOS `.icns` and Windows `.ico` icon assets.
+- Wired the icon into Neutralino packaging and macOS app bundles.
+
 ## [0.1.0] - 2026-08-15
 
 ### Added

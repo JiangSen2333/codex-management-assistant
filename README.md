@@ -112,6 +112,12 @@ Build a macOS `.app` bundle:
 npm run neutralino:build:mac
 ```
 
+Regenerate platform icons from `assets/app-icon.png`:
+
+```bash
+npm run icons:build
+```
+
 Build a macOS GitHub Release zip:
 
 ```bash
