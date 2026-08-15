@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [0.1.4] - 2026-08-15
+
+### Fixed
+
+- Check for updates automatically after launch.
+- Download the latest release package through the local manager service.
+- Save downloaded update packages to the user's Downloads folder with completion feedback.
+
 ## [0.1.3] - 2026-08-15
 
 ### Fixed
