@@ -4,9 +4,23 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build"
+        required: true
+        default: "main"
+      tag:
+        description: "Release tag. Leave empty to use package.json version."
+        required: false
+        default: ""
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   macos:
@@ -16,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -29,12 +45,45 @@ jobs:
       - name: Download Neutralino binaries
         run: npm run neutralino:update
 
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            tag="${GITHUB_REF_NAME}"
+          elif [[ -n "${{ github.event.inputs.tag }}" ]]; then
+            tag="${{ github.event.inputs.tag }}"
+          else
+            tag="v$(node -p "require('./package.json').version")"
+          fi
+
+          version="$(node -p "require('./package.json').version")"
+          if [[ "${tag#v}" != "$version" ]]; then
+            echo "Release tag ${tag} does not match package version ${version}."
+            exit 1
+          fi
+
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
       - name: Build release archive
         run: npm run neutralino:release:mac
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-management-assistant-${{ steps.release.outputs.tag }}-mac
+          path: |
+            dist/codex-management-assistant-mac-*.zip
+            dist/codex-management-assistant-mac-*.dmg
+          if-no-files-found: error
 
       - name: Upload GitHub Release assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.release.outputs.tag }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             dist/codex-management-assistant-mac-*.zip
             dist/codex-management-assistant-mac-*.dmg
