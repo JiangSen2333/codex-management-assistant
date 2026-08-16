@@ -436,11 +436,13 @@ function renderUpdate(update) {
   latestUpdate = update;
   if (!update.updateAvailable) {
     elements.updatePanel.hidden = true;
+    elements.updateButton.hidden = false;
     return;
   }
 
   const assetName = update.asset?.name || "release";
   elements.updatePanel.hidden = false;
+  elements.updateButton.hidden = true;
   elements.updateTitle.textContent = t("updateAvailableTitle", { version: update.latestVersion });
   elements.updateMessage.textContent = t("updateAvailableMessage", {
     current: update.currentVersion,

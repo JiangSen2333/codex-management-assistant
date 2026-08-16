@@ -116,15 +116,75 @@
     </main>
 
     <script>
-      const targetUrl = "http://127.0.0.1:47835/";
+      const expectedVersion = "0.1.5";
+      const portStart = 47835;
+      const portEnd = 47855;
       const statusElement = document.querySelector("#status");
       const retryButton = document.querySelector("#retryButton");
 
-      function openManager() {
+      function compareVersions(left, right) {
+        const a = String(left || "0.0.0").replace(/^v/i, "").split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+        const b = String(right || "0.0.0").replace(/^v/i, "").split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
+        const length = Math.max(a.length, b.length);
+
+        for (let index = 0; index < length; index += 1) {
+          const delta = (a[index] || 0) - (b[index] || 0);
+          if (delta) return Math.sign(delta);
+        }
+
+        return 0;
+      }
+
+      async function probeManager(port) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 450);
+
+        try {
+          const response = await fetch(`http://127.0.0.1:${port}/api/health?t=${Date.now()}`, {
+            cache: "no-store",
+            signal: controller.signal,
+          });
+          if (!response.ok) return null;
+          const health = await response.json();
+          if (health.name !== "Codex Management Assistant") return null;
+          return { ...health, port };
+        } catch {
+          return null;
+        } finally {
+          window.clearTimeout(timeout);
+        }
+      }
+
+      async function findManager() {
+        let newestManager = null;
+
+        for (let port = portStart; port <= portEnd; port += 1) {
+          const manager = await probeManager(port);
+          if (!manager) continue;
+          if (manager.version === expectedVersion) return manager;
+          if (!newestManager || compareVersions(manager.version, newestManager.version) > 0) {
+            newestManager = manager;
+          }
+        }
+
+        if (newestManager && compareVersions(newestManager.version, expectedVersion) > 0) {
+          return newestManager;
+        }
+
+        return null;
+      }
+
+      async function openManager() {
+        statusElement.textContent = "正在查找本地管理服务... / Finding local manager...";
+        const manager = await findManager();
+        if (!manager) {
+          statusElement.textContent = "本地管理服务仍在启动，请稍后重试。 / The local manager is still starting. Try again shortly.";
+          retryButton.hidden = false;
+          return;
+        }
+
         statusElement.textContent = "正在打开管理界面... / Opening manager...";
-        window.setTimeout(() => {
-          window.location.replace(targetUrl);
-        }, 900);
+        window.location.replace(`http://127.0.0.1:${manager.port}/`);
       }
 
       retryButton.addEventListener("click", openManager);

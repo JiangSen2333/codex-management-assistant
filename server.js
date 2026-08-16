@@ -12,6 +12,7 @@ const { DatabaseSync } = require("node:sqlite");
 const url = require("url");
 
 const DEFAULT_PORT = Number(process.env.PORT || 47831);
+const PORT_RETRY_COUNT = Number(process.env.PORT_RETRY_COUNT || 20);
 const CODEX_HOME = path.resolve(process.env.CODEX_HOME || path.join(os.homedir(), ".codex"));
 const PUBLIC_DIR = path.join(__dirname, "public");
 const MIGRATION_DIR = path.join(CODEX_HOME, "provider-migrations");
@@ -19,6 +20,7 @@ const OPERATIONS_FILE = path.join(MIGRATION_DIR, "operations.jsonl");
 const GITHUB_REPOSITORY = "JiangSen2333/codex-management-assistant";
 const UPDATE_DOWNLOAD_DIR = path.resolve(process.env.UPDATE_DOWNLOAD_DIR || path.join(os.homedir(), "Downloads"));
 const APP_VERSION = readAppVersion();
+let activePort = DEFAULT_PORT;
 
 function readAppVersion() {
   const candidates = [
@@ -1000,6 +1002,16 @@ async function handleRequest(request, response) {
   const parsed = url.parse(request.url, true);
 
   try {
+    if (request.method === "GET" && parsed.pathname === "/api/health") {
+      sendJson(response, 200, {
+        name: "Codex Management Assistant",
+        version: APP_VERSION,
+        port: activePort,
+        pid: process.pid,
+      });
+      return;
+    }
+
     if (request.method === "GET" && parsed.pathname === "/api/state") {
       sendJson(response, 200, scanState());
       return;
@@ -1045,7 +1057,27 @@ async function handleRequest(request, response) {
   }
 }
 
-http.createServer(handleRequest).listen(DEFAULT_PORT, "127.0.0.1", () => {
-  console.log(`Codex Management Assistant: http://127.0.0.1:${DEFAULT_PORT}`);
-  console.log(`CODEX_HOME: ${CODEX_HOME}`);
-});
+function listen(port, retriesLeft) {
+  const server = http.createServer(handleRequest);
+
+  server.on("error", (error) => {
+    if (error.code === "EADDRINUSE" && retriesLeft > 0) {
+      const nextPort = port + 1;
+      console.warn(`Port ${port} is in use, trying ${nextPort}...`);
+      listen(nextPort, retriesLeft - 1);
+      return;
+    }
+
+    console.error(`Failed to start Codex Management Assistant on port ${port}: ${error.message}`);
+    process.exit(1);
+  });
+
+  server.listen(port, "127.0.0.1", () => {
+    activePort = port;
+    console.log(`Codex Management Assistant: http://127.0.0.1:${port}`);
+    console.log(`Version: ${APP_VERSION}`);
+    console.log(`CODEX_HOME: ${CODEX_HOME}`);
+  });
+}
+
+listen(DEFAULT_PORT, PORT_RETRY_COUNT);

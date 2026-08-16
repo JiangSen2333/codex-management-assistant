@@ -1,6 +1,6 @@
 {
   "name": "codex-management-assistant",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Local desktop assistant for managing Codex provider IDs, session history migration, and rollback.",
   "license": "MIT",
   "engines": {

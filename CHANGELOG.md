@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [0.1.5] - 2026-08-16
+
+### Fixed
+
+- Avoid connecting the desktop shell to stale local manager services from older installed versions.
+- Hide the header update check button while an update prompt is already visible.
+- Resolve update download failures caused by old local service routing.
+
 ## [0.1.4] - 2026-08-15
 
 ### Fixed
