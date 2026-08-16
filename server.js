@@ -41,12 +41,13 @@ function readAppVersion() {
   return "0.0.0";
 }
 
-function sendJson(response, status, payload) {
+function sendJson(response, status, payload, headers = {}) {
   const body = JSON.stringify(payload, null, 2);
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     "Content-Length": Buffer.byteLength(body),
+    ...headers,
   });
   response.end(body);
 }
@@ -1008,6 +1009,8 @@ async function handleRequest(request, response) {
         version: APP_VERSION,
         port: activePort,
         pid: process.pid,
+      }, {
+        "Access-Control-Allow-Origin": "*",
       });
       return;
     }
