@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -59,12 +60,58 @@ function copyRuntime(source, destination, label) {
   return true;
 }
 
+function copyDarwinRuntime(source, destination) {
+  if (!source || !fs.existsSync(source)) {
+    console.warn("Skipped darwin Node: runtime source not found");
+    return false;
+  }
+
+  const targetArch = process.env.MAC_ARCH || process.arch;
+  if (!["arm64", "x64"].includes(targetArch)) {
+    throw new Error(`Unsupported macOS architecture: ${targetArch}`);
+  }
+  const machoArch = targetArch === "x64" ? "x86_64" : targetArch;
+
+  const architecture = spawnSync("lipo", ["-archs", source], { encoding: "utf8" });
+  if (architecture.status !== 0) {
+    throw new Error(`Unable to inspect darwin Node runtime: ${architecture.stderr.trim()}`);
+  }
+
+  const available = architecture.stdout.trim().split(/\s+/);
+  if (!available.includes(machoArch)) {
+    throw new Error(`Darwin Node runtime does not include ${targetArch}: ${available.join(", ")}`);
+  }
+
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  if (available.length > 1) {
+    const thin = spawnSync("lipo", ["-thin", machoArch, source, "-output", destination], { encoding: "utf8" });
+    if (thin.status !== 0) {
+      throw new Error(`Unable to create ${targetArch} Node runtime: ${thin.stderr.trim()}`);
+    }
+
+    const sign = spawnSync("codesign", ["--force", "--sign", "-", "--timestamp=none", destination], { encoding: "utf8" });
+    if (sign.status !== 0) {
+      throw new Error(`Unable to sign ${targetArch} Node runtime: ${sign.stderr.trim()}`);
+    }
+  } else {
+    fs.copyFileSync(source, destination);
+  }
+
+  fs.chmodSync(destination, 0o755);
+  console.log(`Prepared darwin ${targetArch} Node: ${source} -> ${destination}`);
+  return true;
+}
+
 for (const target of runtimeTargets) {
   const runtimeRoot = path.join(extensionRoot, "runtime", target.key);
   const nodeSource = process.env[target.nodeEnv] || (target.matchesCurrent ? process.execPath : null);
 
   fs.rmSync(runtimeRoot, { recursive: true, force: true });
-  copyRuntime(nodeSource, path.join(runtimeRoot, target.nodeName), `${target.key} Node`);
+  if (target.key === "darwin" && process.platform === "darwin") {
+    copyDarwinRuntime(nodeSource, path.join(runtimeRoot, target.nodeName));
+  } else {
+    copyRuntime(nodeSource, path.join(runtimeRoot, target.nodeName), `${target.key} Node`);
+  }
 }
 
 console.log(`Prepared Neutralino extension app at ${appRoot}`);

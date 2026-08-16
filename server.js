@@ -167,23 +167,32 @@ function compareVersions(left, right) {
   return 0;
 }
 
-function releaseAsset(release, extension) {
-  return release.assets?.find((asset) => asset.name?.endsWith(extension)) || null;
+function releaseAsset(release, extension, platform = process.platform, architecture = process.arch) {
+  const assets = (release.assets || []).filter((asset) => asset.name?.endsWith(extension));
+  if (platform !== "darwin") return assets[0] || null;
+
+  const macArch = architecture === "x64" ? "x64" : architecture === "arm64" ? "arm64" : null;
+  if (macArch) {
+    const matching = assets.find((asset) => asset.name?.includes(`-mac-${macArch}-`));
+    if (matching) return matching;
+  }
+
+  return assets.find((asset) => !/-mac-(?:arm64|x64)-/i.test(asset.name || "")) || null;
 }
 
-function preferredReleaseAsset(release) {
-  const preferredExtensions = process.platform === "darwin"
+function preferredReleaseAsset(release, platform = process.platform, architecture = process.arch) {
+  const preferredExtensions = platform === "darwin"
     ? [".dmg", ".zip"]
-    : process.platform === "win32"
+    : platform === "win32"
       ? [".zip", ".exe", ".msi"]
       : [".zip", ".dmg", ".exe", ".msi"];
 
   for (const extension of preferredExtensions) {
-    const asset = releaseAsset(release, extension);
+    const asset = releaseAsset(release, extension, platform, architecture);
     if (asset) return asset;
   }
 
-  return release.assets?.[0] || null;
+  return platform === "darwin" ? null : release.assets?.[0] || null;
 }
 
 async function checkLatestRelease() {
@@ -1083,4 +1092,8 @@ function listen(port, retriesLeft) {
   });
 }
 
-listen(DEFAULT_PORT, PORT_RETRY_COUNT);
+if (process.env.CODEX_MANAGER_NO_LISTEN !== "1") {
+  listen(DEFAULT_PORT, PORT_RETRY_COUNT);
+}
+
+module.exports = { preferredReleaseAsset, releaseAsset };

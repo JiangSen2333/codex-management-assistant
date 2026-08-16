@@ -24,15 +24,17 @@ Codex 管理助手（Codex Management Assistant）是一个本地桌面工具，
 
 正式发布后，请从 GitHub Releases 下载最新版：
 
-- macOS installer: `codex-management-assistant-mac-v<version>.dmg`
-- macOS portable app: `codex-management-assistant-mac-v<version>.zip`
+- Apple Silicon installer: `codex-management-assistant-mac-arm64-v<version>.dmg`
+- Apple Silicon portable app: `codex-management-assistant-mac-arm64-v<version>.zip`
+- Intel Mac installer: `codex-management-assistant-mac-x64-v<version>.dmg`
+- Intel Mac portable app: `codex-management-assistant-mac-x64-v<version>.zip`
 - Windows: planned
 
 Windows 包需要补齐 Windows Node runtime 后再发布。
 
 ## Install On macOS
 
-Download the `.dmg`, open it, then drag `Codex 管理助手.app` to `Applications`.
+Download the `.dmg` matching your Mac processor, open it, then drag `Codex 管理助手.app` to `Applications`.
 
 The `.zip` package is also available if you prefer to run the app without an installer.
 
@@ -125,6 +127,13 @@ Build a macOS `.app` bundle:
 npm run neutralino:build:mac
 ```
 
+Build a specific macOS architecture:
+
+```bash
+npm run neutralino:build:mac:arm64
+npm run neutralino:build:mac:x64
+```
+
 Regenerate platform icons from `assets/app-icon.png`:
 
 ```bash
@@ -137,16 +146,23 @@ Build a macOS GitHub Release zip:
 npm run neutralino:release:mac
 ```
 
+Build architecture-specific release packages:
+
+```bash
+npm run neutralino:release:mac:arm64
+npm run neutralino:release:mac:x64
+```
+
 The archives are written to:
 
 ```text
-dist/codex-management-assistant-mac-v<version>.dmg
-dist/codex-management-assistant-mac-v<version>.zip
+dist/codex-management-assistant-mac-<arm64|x64>-v<version>.dmg
+dist/codex-management-assistant-mac-<arm64|x64>-v<version>.zip
 ```
 
 ## Runtime Notes
 
-`scripts/prepare-neutralino.mjs` copies the current platform Node runtime into the Neutralino extension runtime directory.
+`scripts/prepare-neutralino.mjs` copies only the requested Node architecture into the Neutralino extension runtime directory. `MAC_ARCH` defaults to the current Mac architecture.
 
 You can also provide explicit runtimes:
 
@@ -183,7 +199,7 @@ git push origin main
 git push origin v0.1.0
 ```
 
-The GitHub Actions release workflow builds the macOS zip and uploads it to the GitHub Release when a `v*` tag is pushed.
+The GitHub Actions release workflow builds separate `arm64` and `x64` macOS ZIP/DMG packages and uploads all four assets when a `v*` tag is pushed.
 
 ## License
 

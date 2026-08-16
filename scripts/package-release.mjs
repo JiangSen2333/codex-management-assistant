@@ -6,11 +6,15 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf8"));
 const version = packageJson.version || "0.0.0";
+const macArch = process.env.MAC_ARCH || process.arch;
+if (!["arm64", "x64"].includes(macArch)) {
+  throw new Error(`Unsupported macOS architecture: ${macArch}`);
+}
 const distRoot = path.join(projectRoot, "dist");
 const appPath = path.join(distRoot, "Codex 管理助手.app");
-const zipPath = path.join(distRoot, `codex-management-assistant-mac-v${version}.zip`);
-const dmgRoot = path.join(distRoot, "dmg-root");
-const dmgPath = path.join(distRoot, `codex-management-assistant-mac-v${version}.dmg`);
+const zipPath = path.join(distRoot, `codex-management-assistant-mac-${macArch}-v${version}.zip`);
+const dmgRoot = path.join(distRoot, `dmg-root-${macArch}`);
+const dmgPath = path.join(distRoot, `codex-management-assistant-mac-${macArch}-v${version}.dmg`);
 
 if (process.platform !== "darwin") {
   throw new Error("macOS release archives must be created on macOS because they package a .app bundle.");

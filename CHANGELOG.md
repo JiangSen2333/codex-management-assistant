@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog, and this project follows Semantic Versioning.
 
+## [0.1.7] - 2026-08-16
+
+### Changed
+
+- Publish separate Apple Silicon (`arm64`) and Intel (`x64`) macOS packages.
+- Select the matching macOS architecture automatically when downloading an update.
+- Reduce each macOS package by bundling only its required Node.js architecture.
+
 ## [0.1.6] - 2026-08-16
 
 ### Fixed
